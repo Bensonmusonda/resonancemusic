@@ -1,7 +1,8 @@
 # Stage 1: Build the Spring Boot application (Gradle)
-FROM gradle:8.2.1-jdk17 AS builder 
+FROM gradle:8.2.1-jdk17 AS builder
 WORKDIR /app
-COPY . .  
+COPY . . 
+RUN chmod +x gradlew # Grant execute permissions to gradlew
 RUN ./gradlew bootJar -Dorg.gradle.daemon=false # Use gradle wrapper
 
 # Stage 2: Build the Python scripts environment and copy the Spring Boot JAR
