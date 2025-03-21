@@ -1,5 +1,5 @@
 # Stage 1: Build Stage
-FROM gradle:8.12.1-jdk17 AS build  # Use the correct Gradle version here
+FROM gradle:8.12.1-jdk17 AS build
 WORKDIR /app
 
 # Copy the Gradle wrapper and source code.  This is optimized for Gradle Wrapper.
