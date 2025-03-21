@@ -1,5 +1,6 @@
 package com.resonance.music.resonancemusic.controllers;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,11 +12,11 @@ import org.springframework.web.bind.annotation.*;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import org.springframework.scheduling.annotation.Async;
 
 @RestController
@@ -33,12 +34,12 @@ public class YouTubeController {
 
     // Search Endpoint
     @PostMapping("/search")
-    @Async // Make this endpoint asynchronous
+    @Async
     public CompletableFuture<ResponseEntity<?>> searchYouTube(@RequestBody Map<String, String> payload) {
         String query = payload.get("query");
         logger.info("Searching YouTube for: {}", query);
 
-        return CompletableFuture.supplyAsync(() -> { // Use supplyAsync for non-void return
+        return CompletableFuture.supplyAsync(() -> {
             try {
                 String scriptPath = Files.exists(Paths.get("/.dockerenv"))
                         ? "scripts/" + ytSearchScriptPath
@@ -48,15 +49,17 @@ public class YouTubeController {
                 processBuilder.redirectErrorStream(true);
                 Process process = processBuilder.start();
 
-                String output = getProcessOutput(process); // Refactor output reading
+                String output = getProcessOutput(process);
                 int exitCode = process.waitFor();
 
                 if (exitCode != 0) {
                     logger.error("Search script failed with exit code {}. Output: {}", exitCode, output);
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                            .body("Search failed: " + output); // Improved error
+                            .body("Search failed: " + output);
                 }
-                Map<String, Object> jsonOutput = objectMapper.readValue(output, Map.class);
+
+                // Use TypeReference to handle JSON array
+                List<Map<String, Object>> jsonOutput = objectMapper.readValue(output, new TypeReference<List<Map<String, Object>>>() {});
                 logger.info("Search successful, returning results.");
                 return ResponseEntity.ok(jsonOutput);
 
@@ -92,7 +95,9 @@ public class YouTubeController {
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                             .body("Stream failed: " + output);
                 }
-                Map<String, Object> jsonOutput = objectMapper.readValue(output, Map.class);
+
+                // Use TypeReference to handle JSON array
+                List<Map<String, Object>> jsonOutput = objectMapper.readValue(output, new TypeReference<List<Map<String, Object>>>() {});
                 logger.info("Stream was successful.");
                 return ResponseEntity.ok(jsonOutput);
             } catch (IOException | InterruptedException | IllegalArgumentException e) {
@@ -116,7 +121,7 @@ public class YouTubeController {
             StringBuilder output = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {
-                output.append(line).append(System.lineSeparator()); // Use platform-independent line separator
+                output.append(line).append(System.lineSeparator());
             }
             return output.toString();
         }
