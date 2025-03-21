@@ -21,6 +21,9 @@ RUN chown -R appuser:appuser /app
 # Switch to the appuser
 USER appuser
 
+# Add yt-dlp to the PATH
+ENV PATH="/home/appuser/.local/bin:${PATH}"
+
 # Install yt-dlp and other Python dependencies (if any)
 COPY src/main/resources/scripts/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
