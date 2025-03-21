@@ -6,7 +6,7 @@ RUN chmod +x gradlew
 RUN ./gradlew bootJar -Dorg.gradle.daemon=false
 
 # Stage 2: Build the Python scripts environment and copy the Spring Boot JAR
-FROM python:3.9-slim-buster
+FROM python:3.9-slim
 WORKDIR /app
 
 # Install Java Runtime Environment (JRE)
