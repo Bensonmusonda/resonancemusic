@@ -1,13 +1,16 @@
 # Stage 1: Build the Spring Boot application (Gradle)
 FROM gradle:8.2.1-jdk17 AS builder
 WORKDIR /app
-COPY . . 
-RUN chmod +x gradlew # Grant execute permissions to gradlew
-RUN ./gradlew bootJar -Dorg.gradle.daemon=false # Use gradle wrapper
+COPY . .
+RUN chmod +x gradlew
+RUN ./gradlew bootJar -Dorg.gradle.daemon=false
 
 # Stage 2: Build the Python scripts environment and copy the Spring Boot JAR
 FROM python:3.9-slim-buster
 WORKDIR /app
+
+# Install Java Runtime Environment (JRE)
+RUN apt-get update && apt-get install -y openjdk-17-jre-headless && rm -rf /var/lib/apt/lists/*
 
 # Install yt-dlp and other Python dependencies (if any)
 COPY src/main/resources/scripts/requirements.txt ./requirements.txt
