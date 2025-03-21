@@ -9,7 +9,7 @@ COPY build.gradle .
 COPY settings.gradle .
 COPY src ./src
 
-# Set execute permissions for the Gradle wrapper.  This is the fix!
+# Set execute permissions for the Gradle wrapper.
 RUN chmod +x gradlew
 
 # Use the Gradle wrapper to build the application.  This ensures the correct Gradle version is used.
@@ -25,7 +25,7 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the Python scripts from the build stage.  Adjust this path if necessary!
+# Copy the Python scripts from the build stage.
 COPY --from=build /app/build/resources/main/scripts/ ./scripts/
 
 # Set permissions for Python scripts
