@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: resonancemusic
+    runtime: docker
+    dockerfilePath: Dockerfile
+    port: 8080
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: production
