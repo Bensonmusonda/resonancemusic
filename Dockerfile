@@ -1,48 +1,38 @@
-# Stage 1: Build the Spring Boot application (Gradle)
-FROM gradle:8.2.1-jdk17 AS builder
-WORKDIR /app
-COPY . .
-RUN chmod +x gradlew
-RUN ./gradlew bootJar -Dorg.gradle.daemon=false
-
-# Stage 2: Build the Python scripts environment and copy the Spring Boot JAR
-FROM python:3.9-slim
+# Stage 1: Build Stage
+FROM maven:3.8.5-openjdk-17 AS build
 WORKDIR /app
 
-# Install Java Runtime Environment (JRE)
-RUN apt-get update && apt-get install -y openjdk-17-jre-headless && rm -rf /var/lib/apt/lists/*
+# Copy the Maven project files
+COPY pom.xml .
+COPY src ./src
 
-# Create a non-root user
-RUN adduser --disabled-password --gecos '' appuser
+# Build the Spring Boot application
+RUN mvn clean package -DskipTests
 
-# Change ownership of /app to appuser
-RUN chown -R appuser:appuser /app
+# Stage 2: Runtime Stage
+FROM openjdk:17-jdk-slim AS runtime
+WORKDIR /app
 
-# Switch to the appuser
-USER appuser
+# Install Python and dependencies
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
 
-# Add yt-dlp to the PATH
-ENV PATH="/home/appuser/.local/bin:${PATH}"
+# Copy the Python scripts
+COPY --from=build /app/src/main/resources/scripts/ ./scripts/
 
-# Install yt-dlp and other Python dependencies (if any)
-COPY src/main/resources/scripts/requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy the Spring Boot JAR from the builder stage
-COPY --from=builder /app/build/libs/*.jar ./app.jar
-
-# Copy your Python scripts
-COPY src/main/resources/scripts/ ./scripts/
+# Set permissions for Python scripts
 RUN chmod +x /app/scripts/*.py
 
-# Copy the Spring Boot application properties (if needed)
-COPY src/main/resources/application.properties ./application.properties
+# Install Python dependencies (if any)
+RUN if [ -f /app/scripts/requirements.txt ]; then pip3 install -r /app/scripts/requirements.txt; fi
 
-# Debug: List the copied scripts
-RUN ls -l /app/scripts/
+# Copy the Spring Boot application JAR
+COPY --from=build /app/target/*.jar app.jar
 
-# Expose the Spring Boot port
+# Expose the application port
 EXPOSE 8080
 
 # Run the Spring Boot application
-CMD ["sh", "-c", "cd /app && java -jar app.jar"]
+CMD ["java", "-jar", "app.jar"]
