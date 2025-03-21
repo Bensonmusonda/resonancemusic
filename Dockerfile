@@ -1,13 +1,16 @@
 # Stage 1: Build Stage
-FROM maven:3.8.5-openjdk-17 AS build
+FROM gradle:8.12.1-jdk17 AS build  # Use the correct Gradle version here
 WORKDIR /app
 
-# Copy the Maven project files
-COPY pom.xml .
+# Copy the Gradle wrapper and source code.  This is optimized for Gradle Wrapper.
+COPY gradle ./gradle
+COPY gradlew .
+COPY build.gradle .
+COPY settings.gradle .
 COPY src ./src
 
-# Build the Spring Boot application
-RUN mvn clean package -DskipTests
+# Use the Gradle wrapper to build the application.  This ensures the correct Gradle version is used.
+RUN ./gradlew bootJar
 
 # Stage 2: Runtime Stage
 FROM openjdk:17-jdk-slim AS runtime
@@ -19,8 +22,8 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the Python scripts
-COPY --from=build /app/src/main/resources/scripts/ ./scripts/
+# Copy the Python scripts from the build stage.  Adjust this path if necessary!
+COPY --from=build /app/build/resources/main/scripts/ ./scripts/
 
 # Set permissions for Python scripts
 RUN chmod +x /app/scripts/*.py
@@ -28,8 +31,8 @@ RUN chmod +x /app/scripts/*.py
 # Install Python dependencies (if any)
 RUN if [ -f /app/scripts/requirements.txt ]; then pip3 install -r /app/scripts/requirements.txt; fi
 
-# Copy the Spring Boot application JAR
-COPY --from=build /app/target/*.jar app.jar
+# Copy the Spring Boot application JAR from the build stage.
+COPY --from=build /app/build/libs/*.jar app.jar
 
 # Expose the application port
 EXPOSE 8080
