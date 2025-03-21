@@ -9,6 +9,9 @@ COPY build.gradle .
 COPY settings.gradle .
 COPY src ./src
 
+# Set execute permissions for the Gradle wrapper.  This is the fix!
+RUN chmod +x gradlew
+
 # Use the Gradle wrapper to build the application.  This ensures the correct Gradle version is used.
 RUN ./gradlew bootJar
 
