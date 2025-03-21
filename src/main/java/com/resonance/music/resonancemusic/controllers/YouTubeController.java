@@ -19,7 +19,7 @@ public class YouTubeController {
         try {
             // Run the Python script
             ProcessBuilder processBuilder = new ProcessBuilder(
-                "python",
+                "python3",
                 "scripts/yt_search.py", // Correct path in the container
                 query
             );
@@ -50,7 +50,7 @@ public class YouTubeController {
         try {
             // Run the Python script
             ProcessBuilder processBuilder = new ProcessBuilder(
-                "python",
+                "python3",
                 "scripts/yt_stream.py", // Correct path in the container
                 videoUrl
             );
