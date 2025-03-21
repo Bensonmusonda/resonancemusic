@@ -33,12 +33,16 @@ COPY --from=builder /app/build/libs/*.jar ./app.jar
 
 # Copy your Python scripts
 COPY src/main/resources/scripts/ ./scripts/
+RUN chmod +x /app/scripts/*.py
 
 # Copy the Spring Boot application properties (if needed)
 COPY src/main/resources/application.properties ./application.properties
 
+# Debug: List the copied scripts
+RUN ls -l /app/scripts/
+
 # Expose the Spring Boot port
 EXPOSE 8080
 
-# Run the Spring Boot application and your Python scripts (if needed)
-CMD ["sh", "-c", "java -jar app.jar"]
+# Run the Spring Boot application
+CMD ["sh", "-c", "cd /app && java -jar app.jar"]

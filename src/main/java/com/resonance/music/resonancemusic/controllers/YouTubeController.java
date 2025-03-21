@@ -20,9 +20,10 @@ public class YouTubeController {
             // Run the Python script
             ProcessBuilder processBuilder = new ProcessBuilder(
                 "python",
-                "src/main/resources/scripts/yt_search.py", // Update path here
+                "scripts/yt_search.py", // Correct path in the container
                 query
             );
+
             processBuilder.redirectErrorStream(true);
             Process process = processBuilder.start();
 
@@ -50,9 +51,10 @@ public class YouTubeController {
             // Run the Python script
             ProcessBuilder processBuilder = new ProcessBuilder(
                 "python",
-                "src/main/resources/scripts/yt_stream.py", // Update path here
+                "scripts/yt_stream.py", // Correct path in the container
                 videoUrl
             );
+
             processBuilder.redirectErrorStream(true);
             Process process = processBuilder.start();
 
