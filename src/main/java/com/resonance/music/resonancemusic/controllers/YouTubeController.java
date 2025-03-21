@@ -14,10 +14,13 @@ import java.io.InputStreamReader;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.concurrent.CompletableFuture;
 import org.springframework.scheduling.annotation.Async;
+import java.nio.file.Paths;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 @RestController
 @RequestMapping("/api")
@@ -27,10 +30,10 @@ public class YouTubeController {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${yt.search.script.path}")
-    private String ytSearchScriptPath;
+    private String ytSearchScriptPath; //  "scripts/yt_search.py"
 
     @Value("${yt.stream.script.path}")
-    private String ytStreamScriptPath;
+    private String ytStreamScriptPath; // "scripts/yt_stream.py"
 
     // Search Endpoint
     @PostMapping("/search")
@@ -41,9 +44,8 @@ public class YouTubeController {
 
         return CompletableFuture.supplyAsync(() -> {
             try {
-                String scriptPath = Files.exists(Paths.get("/.dockerenv"))
-                        ? "scripts/" + ytSearchScriptPath
-                        : "src/main/resources/scripts/" + ytSearchScriptPath;
+                // Determine the correct script path
+                String scriptPath = getScriptPath(ytSearchScriptPath);
 
                 ProcessBuilder processBuilder = new ProcessBuilder("python", scriptPath, query);
                 processBuilder.redirectErrorStream(true);
@@ -58,8 +60,16 @@ public class YouTubeController {
                             .body("Search failed: " + output);
                 }
 
+                // Extract JSON from output
+                String jsonString = extractJson(output);
+                if (jsonString == null) {
+                    logger.error("No valid JSON found in script output: {}", output);
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .body("No valid JSON found in script output");
+                }
+
                 // Use TypeReference to handle JSON array
-                List<Map<String, Object>> jsonOutput = objectMapper.readValue(output, new TypeReference<List<Map<String, Object>>>() {});
+                List<Map<String, Object>> jsonOutput = objectMapper.readValue(jsonString, new TypeReference<List<Map<String, Object>>>() {});
                 logger.info("Search successful, returning results.");
                 return ResponseEntity.ok(jsonOutput);
 
@@ -79,9 +89,8 @@ public class YouTubeController {
         logger.info("Streaming audio from: {}", videoUrl);
         return CompletableFuture.supplyAsync(() -> {
             try {
-                String scriptPath = Files.exists(Paths.get("/.dockerenv"))
-                        ? "scripts/" + ytStreamScriptPath
-                        : "src/main/resources/scripts/" + ytStreamScriptPath;
+                // Determine the correct script path
+                String scriptPath = getScriptPath(ytStreamScriptPath);
 
                 ProcessBuilder processBuilder = new ProcessBuilder("python", scriptPath, videoUrl);
                 processBuilder.redirectErrorStream(true);
@@ -96,8 +105,16 @@ public class YouTubeController {
                             .body("Stream failed: " + output);
                 }
 
+                // Extract JSON from output
+                String jsonString = extractJson(output);
+                if (jsonString == null) {
+                    logger.error("No valid JSON found in script output: {}", output);
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .body("No valid JSON found in script output");
+                }
+
                 // Use TypeReference to handle JSON array
-                List<Map<String, Object>> jsonOutput = objectMapper.readValue(output, new TypeReference<List<Map<String, Object>>>() {});
+                List<Map<String, Object>> jsonOutput = objectMapper.readValue(jsonString, new TypeReference<List<Map<String, Object>>>() {});
                 logger.info("Stream was successful.");
                 return ResponseEntity.ok(jsonOutput);
             } catch (IOException | InterruptedException | IllegalArgumentException e) {
@@ -124,6 +141,26 @@ public class YouTubeController {
                 output.append(line).append(System.lineSeparator());
             }
             return output.toString();
+        }
+    }
+
+    // Helper method to extract JSON from a string
+    private String extractJson(String input) {
+        // Regular expression to find JSON object (starting with { and ending with })
+        Pattern pattern = Pattern.compile("\\{.*\\}");
+        Matcher matcher = pattern.matcher(input);
+        if (matcher.find()) {
+            return matcher.group(0); // Return the first JSON object found
+        }
+        return null;
+    }
+
+    private String getScriptPath(String scriptName) {
+        Path scriptPath = Paths.get(scriptName);
+        if (Files.exists(scriptPath)) {
+            return scriptPath.toString();
+        } else {
+            return "/app/" + scriptName; // Path for Docker container
         }
     }
 }
